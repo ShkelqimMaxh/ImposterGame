@@ -65,14 +65,10 @@ export class MemStorage implements IStorage {
   }
 
   async joinRoom(code: string, name: string, sessionId: string): Promise<{ room: Room; player: Player } | undefined> {
-    console.log("[Storage] joinRoom called:", { code, name, sessionId });
     const room = this.rooms.get(code);
     if (!room) {
-      console.warn("[Storage] Room not found for code:", code);
       return undefined;
     }
-
-    console.log("[Storage] Room found:", { code: room.code, status: room.status });
 
     // Check if player already in room (re-join)
     const existingPlayerIds = this.roomPlayers.get(code) || [];
@@ -81,12 +77,10 @@ export class MemStorage implements IStorage {
       .find(p => p?.sessionId === sessionId);
 
     if (existingPlayer) {
-      console.log("[Storage] Player already in room:", { name: existingPlayer.name });
       return { room, player: existingPlayer };
     }
 
     if (room.status !== "waiting") {
-      console.warn("[Storage] Cannot join - game status is:", room.status);
       return undefined; // Cannot join if game started
     }
 
@@ -102,7 +96,6 @@ export class MemStorage implements IStorage {
     existingPlayerIds.push(player.id);
     this.roomPlayers.set(code, existingPlayerIds);
 
-    console.log("[Storage] Player added to room:", { playerId: player.id, name: player.name });
     return { room, player };
   }
 

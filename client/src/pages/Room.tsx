@@ -22,14 +22,8 @@ export default function Room() {
   const [retryCount, setRetryCount] = useState(0);
   const [joinName, setJoinName] = useState("");
 
-  // Debug: Log when component mounts
-  useEffect(() => {
-    console.log("[Room] Component mounted/updated:", { code, isLoading, hasGameState: !!gameState, error });
-  }, [code, isLoading, gameState, error]);
-
   useEffect(() => {
     if (error) {
-      console.error("[Room] Error loading room:", error);
       toast({ title: "Error", description: "Room not found or expired", variant: "destructive" });
       setLocation("/");
     }
@@ -40,18 +34,9 @@ export default function Room() {
   useEffect(() => {
     if (!isLoading && gameState && !gameState.me) {
       const sessionId = localStorage.getItem('playerId');
-      console.log("[Room] User not in room:", { 
-        hasSessionId: !!sessionId, 
-        sessionId, 
-        retryCount, 
-        roomCode: gameState.room.code,
-        roomStatus: gameState.room.status,
-        playerCount: gameState.players.length 
-      });
       
       // If no session ID, user is accessing via link - show join form immediately
       if (!sessionId) {
-        console.log("[Room] No session ID - user accessing via link, showing join form");
         setRetryCount(2); // Set to 2 to immediately show join form
         return;
       }
@@ -60,7 +45,6 @@ export default function Room() {
       if (sessionId && retryCount < 2) {
         // Wait a bit and retry
         const timer = setTimeout(() => {
-          console.log("[Room] Retrying room fetch, attempt:", retryCount + 1);
           setRetryCount(prev => prev + 1);
           refetch();
         }, 500);
@@ -128,23 +112,13 @@ export default function Room() {
 
   const handleJoinFromLink = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("[Room] handleJoinFromLink called:", { code, joinName: joinName.trim() });
     if (code && joinName.trim()) {
-      console.log("[Room] Attempting to join room:", { code, name: joinName.trim() });
       joinRoom.mutate({ code, name: joinName.trim() });
-    } else {
-      console.warn("[Room] Cannot join - missing code or name:", { code, joinName });
     }
   };
 
   // If user is not in room and we've tried retries (or no session ID), show join form
   if (!me && retryCount >= 2 && gameState && gameState.room.status === "waiting") {
-    console.log("[Room] Showing join form - user not in room:", { 
-      retryCount, 
-      roomStatus: gameState.room.status,
-      roomCode: gameState.room.code,
-      hasSessionId: !!localStorage.getItem('playerId')
-    });
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
         <motion.div
