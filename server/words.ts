@@ -8,10 +8,10 @@ export const categories = {
     objects: ["Chair", "Table", "Laptop", "Phone", "Book", "Pen", "Car", "Bicycle", "Clock", "Lamp"]
   },
   sq: {
-    animals: ["Luani", "Elefanti", "Gjirafa", "Pinguini", "Delfini", "Tigri", "Kanguri", "Zebra", "Panda", "Koala"],
-    food: ["Pica", "Burger", "Sushi", "Makarona", "Taco", "Akullore", "Pankek", "Waffle", "Biftek", "Sallatë"],
-    jobs: ["Doktor", "Mësues", "Inxhinier", "Artist", "Kuzhinier", "Pilot", "Zjarrfikës", "Polic", "Avokat", "Infermier"],
-    objects: ["Karrige", "Tavolinë", "Laptop", "Telefon", "Libër", "Stilolaps", "Makinë", "Biçikletë", "Orë", "Llampë"]
+    animals: ["Luani", "Elefanti", "Gjirafa", "Pinguini", "Delfini", "Tigri", "Kanguri", "Zebra", "Panda", "Koala", "Qeni", "Maca", "Zog", "Peshk", "Kali", "Lopa", "Dhi", "Derri", "Lepuri", "Mi", "Ari", "Ujku", "Dhelpra", "Dreri", "Mjalta"],
+    food: ["Pica", "Burger", "Sushi", "Makarona", "Taco", "Akullore", "Pankek", "Waffle", "Biftek", "Sallatë", "Bukë", "Qumësht", "Djathë", "Vezë", "Mollë", "Banane", "Portokall", "Domate", "Qepë", "Patate", "Oriz", "Supë", "Tortë", "Biskota", "Çokollatë"],
+    jobs: ["Doktor", "Mësues", "Inxhinier", "Artist", "Kuzhinier", "Pilot", "Zjarrfikës", "Polic", "Avokat", "Infermier", "Shkencëtar", "Shkrimtar", "Muzikant", "Këngëtar", "Valltar", "Aktor", "Gazetar", "Fotograf", "Arkitekt", "Kontabilist", "Menaxher", "Shofer", "Fermer", "Ndërtues", "Programues"],
+    objects: ["Karrige", "Tavolinë", "Laptop", "Telefon", "Libër", "Stilolaps", "Makinë", "Biçikletë", "Orë", "Llampë", "Derë", "Dritare", "Krevat", "Sofë", "Pasqyrë", "Foto", "Çantë", "Kuti", "Çelës", "Kyç", "Kupë", "Pjatë", "Lugë", "Pirun", "Thikë"]
   },
   es: {
     animals: ["León", "Elefante", "Jirafa", "Pingüino", "Delfín", "Tigre", "Canguro", "Cebra", "Panda", "Koala"],

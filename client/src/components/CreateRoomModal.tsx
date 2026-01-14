@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCreateRoom } from "@/hooks/use-game";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,15 @@ import { motion } from "framer-motion";
 export function CreateRoomModal({ trigger }: { trigger: React.ReactNode }) {
   const [name, setName] = useState("");
   const [language, setLanguage] = useState<"en" | "sq" | "es" | "de">("en");
+  const [open, setOpen] = useState(false);
   const createRoom = useCreateRoom();
+
+  // Close modal when room is successfully created
+  useEffect(() => {
+    if (createRoom.isSuccess) {
+      setOpen(false);
+    }
+  }, [createRoom.isSuccess]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +33,7 @@ export function CreateRoomModal({ trigger }: { trigger: React.ReactNode }) {
   ] as const;
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger}
       </DialogTrigger>

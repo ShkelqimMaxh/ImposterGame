@@ -1,23 +1,84 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useJoinRoom } from "@/hooks/use-game";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Key } from "lucide-react";
+import { Loader2, Link } from "lucide-react";
 
 export function JoinRoomModal({ trigger }: { trigger: React.ReactNode }) {
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
+  const [open, setOpen] = useState(false);
   const joinRoom = useJoinRoom();
+
+  // Close modal when room is successfully joined
+  useEffect(() => {
+    if (joinRoom.isSuccess) {
+      setOpen(false);
+    }
+  }, [joinRoom.isSuccess]);
+
+  // Extract room code from URL or return the input as-is if it's already a code
+  const extractRoomCode = (input: string): string | null => {
+    const trimmed = input.trim().toUpperCase();
+    
+    // If it's already a 4-character code, return it
+    if (/^[A-Z]{4}$/.test(trimmed)) {
+      return trimmed;
+    }
+    
+    // Try to extract code from URL pattern (e.g., /room/ABCD)
+    const urlMatch = trimmed.match(/\/room\/([A-Z0-9]{4})/i);
+    if (urlMatch && urlMatch[1]) {
+      return urlMatch[1].toUpperCase();
+    }
+    
+    // Try to extract from full URL
+    try {
+      const url = new URL(trimmed);
+      const pathMatch = url.pathname.match(/\/room\/([A-Z0-9]{4})/i);
+      if (pathMatch && pathMatch[1]) {
+        return pathMatch[1].toUpperCase();
+      }
+    } catch (e) {
+      // Not a valid URL, continue
+    }
+    
+    return null;
+  };
+
+  const handleCodeChange = (value: string) => {
+    setCode(value);
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const pasted = e.clipboardData.getData('text');
+    const extracted = extractRoomCode(pasted);
+    if (extracted) {
+      setCode(extracted);
+      e.preventDefault();
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    joinRoom.mutate({ code, name });
+    const extracted = extractRoomCode(code);
+    const finalCode = extracted || code.trim().toUpperCase();
+    if (finalCode.length === 4 && /^[A-Z]{4}$/.test(finalCode)) {
+      joinRoom.mutate({ code: finalCode, name });
+    }
+  };
+
+  // Check if we have a valid code (either direct code or extractable from input)
+  const isValidCode = (): boolean => {
+    const extracted = extractRoomCode(code);
+    const finalCode = extracted || code.trim().toUpperCase();
+    return finalCode.length === 4 && /^[A-Z]{4}$/.test(finalCode);
   };
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger}
       </DialogTrigger>
@@ -30,19 +91,20 @@ export function JoinRoomModal({ trigger }: { trigger: React.ReactNode }) {
         
         <form onSubmit={handleSubmit} className="space-y-6 mt-4">
           <div className="space-y-2">
-            <Label htmlFor="room-code" className="text-base font-semibold">Room Code</Label>
+            <Label htmlFor="room-code" className="text-base font-semibold">Room Code or Link</Label>
             <div className="relative">
-              <Key className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Link className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
                 id="room-code"
-                placeholder="ABCD"
+                placeholder="ABCD or paste room link"
                 value={code}
-                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                onChange={(e) => handleCodeChange(e.target.value)}
+                onPaste={handlePaste}
                 className="pl-12 text-lg py-6 font-mono tracking-widest uppercase border-2 focus-visible:ring-secondary/20"
-                maxLength={4}
                 required
               />
             </div>
+            <p className="text-xs text-muted-foreground">Enter a 4-letter code or paste a room link</p>
           </div>
 
           <div className="space-y-2">
@@ -62,7 +124,7 @@ export function JoinRoomModal({ trigger }: { trigger: React.ReactNode }) {
             type="submit" 
             variant="secondary"
             className="w-full h-14 text-lg font-bold rounded-xl shadow-lg shadow-secondary/25 transition-all hover:-translate-y-0.5 active:translate-y-0"
-            disabled={joinRoom.isPending || !name || code.length !== 4}
+            disabled={joinRoom.isPending || !name || !isValidCode()}
           >
             {joinRoom.isPending ? (
               <Loader2 className="mr-2 h-6 w-6 animate-spin" />

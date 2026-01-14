@@ -91,6 +91,8 @@ export async function registerRoutes(
       const sessionId = Math.random().toString(36).substring(7);
       
       const { room, player } = await storage.createRoom(input.name, input.language, sessionId);
+      // Broadcast the room update so any connected clients see the new room
+      broadcastRoomUpdate(room.code);
       res.status(201).json({ code: room.code, playerId: sessionId });
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -132,7 +134,12 @@ export async function registerRoutes(
     }
     
     const players = await storage.getPlayers(code);
-    const me = players.find(p => p.sessionId === sessionId) || null;
+    // If no session ID provided, try to find by hostId as fallback
+    let me = players.find(p => p.sessionId === sessionId) || null;
+    // Fallback: if sessionId matches hostId, find the host
+    if (!me && sessionId && sessionId === room.hostId) {
+      me = players.find(p => p.isHost) || null;
+    }
 
     // Sanitize room data for the client
     // If game is playing:
