@@ -114,6 +114,12 @@ export function JoinRoomModal({ trigger }: { trigger: React.ReactNode }) {
               placeholder="e.g. Sneaky Pete"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              onFocus={(e) => {
+                // Scroll input into view on mobile when keyboard opens
+                setTimeout(() => {
+                  e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100);
+              }}
               className="text-lg py-6 border-2 focus-visible:ring-secondary/20"
               maxLength={12}
               required

@@ -52,6 +52,12 @@ export function CreateRoomModal({ trigger }: { trigger: React.ReactNode }) {
               placeholder="e.g. Captain Sus"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              onFocus={(e) => {
+                // Scroll input into view on mobile when keyboard opens
+                setTimeout(() => {
+                  e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100);
+              }}
               className="text-lg py-6 border-2 focus-visible:ring-primary/20"
               maxLength={12}
               required
@@ -61,21 +67,28 @@ export function CreateRoomModal({ trigger }: { trigger: React.ReactNode }) {
           <div className="space-y-3">
             <Label className="text-base font-semibold">Game Language</Label>
             <div className="grid grid-cols-2 gap-3">
-              {languages.map((lang) => (
-                <div
-                  key={lang.code}
-                  onClick={() => setLanguage(lang.code)}
-                  className={`
-                    cursor-pointer rounded-xl border-2 p-4 flex items-center gap-3 transition-all duration-200
-                    ${language === lang.code 
-                      ? 'border-primary bg-primary/5 shadow-lg shadow-primary/10 scale-[1.02]' 
-                      : 'border-transparent bg-secondary/5 hover:bg-secondary/10 hover:border-secondary/20'}
-                  `}
-                >
-                  <span className="text-2xl">{lang.flag}</span>
-                  <span className="font-medium">{lang.label}</span>
-                </div>
-              ))}
+              {languages.map((lang) => {
+                const isSelected = language === lang.code;
+                const isAlbanian = lang.code === 'sq';
+                
+                return (
+                  <div
+                    key={lang.code}
+                    onClick={() => setLanguage(lang.code)}
+                    className={`
+                      cursor-pointer rounded-xl border-2 p-4 flex items-center gap-3 transition-all duration-200
+                      ${isSelected
+                        ? isAlbanian
+                          ? 'border-red-600/30 bg-gradient-to-br from-red-600 via-red-900 to-black shadow-lg shadow-red-900/20 scale-[1.02] text-white'
+                          : 'border-primary bg-primary/5 shadow-lg shadow-primary/10 scale-[1.02]'
+                        : 'border-transparent bg-secondary/5 hover:bg-secondary/10 hover:border-secondary/20'}
+                    `}
+                  >
+                    <span className="text-2xl">{lang.flag}</span>
+                    <span className={`font-medium ${isSelected && isAlbanian ? 'text-white' : ''}`}>{lang.label}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 

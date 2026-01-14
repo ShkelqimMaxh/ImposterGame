@@ -105,17 +105,28 @@ export async function registerRoutes(
 
   app.post(api.rooms.join.path, async (req, res) => {
     try {
+      console.log("[Server] Join room request received:", req.body);
       const input = api.rooms.join.input.parse(req.body);
+      console.log("[Server] Parsed input:", input);
       const sessionId = Math.random().toString(36).substring(7);
       
       const result = await storage.joinRoom(input.code, input.name, sessionId);
+      console.log("[Server] Join room result:", { 
+        success: !!result, 
+        roomCode: result?.room?.code,
+        roomStatus: result?.room?.status 
+      });
+      
       if (!result) {
+        console.warn("[Server] Join failed - room not found or game started");
         return res.status(404).json({ message: "Room not found or game already started" });
       }
       
       broadcastRoomUpdate(input.code);
+      console.log("[Server] Join successful, sending response:", { code: result.room.code, playerId: sessionId });
       res.json({ code: result.room.code, playerId: sessionId });
     } catch (err) {
+      console.error("[Server] Join room error:", err);
       if (err instanceof z.ZodError) {
         res.status(400).json({ message: err.errors[0].message });
       } else {
@@ -128,18 +139,35 @@ export async function registerRoutes(
     const code = req.params.code;
     const sessionId = req.headers['x-session-id'] as string; // Client sends this
     
+    console.log("[Server] GET room request:", { code, sessionId });
+    
     const room = await storage.getRoom(code);
     if (!room) {
+      console.warn("[Server] Room not found:", code);
       return res.status(404).json({ message: "Room not found" });
     }
     
     const players = await storage.getPlayers(code);
+    console.log("[Server] Room found:", { 
+      code: room.code, 
+      status: room.status, 
+      playerCount: players.length,
+      playerSessions: players.map(p => ({ name: p.name, sessionId: p.sessionId, isHost: p.isHost }))
+    });
+    
     // If no session ID provided, try to find by hostId as fallback
     let me = players.find(p => p.sessionId === sessionId) || null;
     // Fallback: if sessionId matches hostId, find the host
     if (!me && sessionId && sessionId === room.hostId) {
       me = players.find(p => p.isHost) || null;
     }
+    
+    console.log("[Server] Player 'me' found:", { 
+      hasMe: !!me, 
+      meName: me?.name, 
+      meSessionId: me?.sessionId,
+      requestedSessionId: sessionId 
+    });
 
     // Sanitize room data for the client
     // If game is playing:

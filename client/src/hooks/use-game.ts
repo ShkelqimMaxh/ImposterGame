@@ -72,19 +72,41 @@ export function useRoom(code: string) {
   return useQuery({
     queryKey: [api.rooms.get.path, code, sessionId], // Include sessionId in key so it refetches when it changes
     queryFn: async () => {
+      console.log("[useRoom] Fetching room:", { code, sessionId });
       const url = buildUrl(api.rooms.get.path, { code });
       const currentSessionId = getSessionId();
       const headers: HeadersInit = { "Content-Type": "application/json" };
       if (currentSessionId) {
         headers["x-session-id"] = currentSessionId;
       }
+      console.log("[useRoom] Request URL:", url, "Headers:", headers);
+      
       const res = await fetch(url, { 
         credentials: "include",
         headers
       });
-      if (res.status === 404) return null;
-      if (!res.ok) throw new Error("Failed to fetch room");
-      return api.rooms.get.responses[200].parse(await res.json());
+      
+      console.log("[useRoom] Response:", { status: res.status, statusText: res.statusText });
+      
+      if (res.status === 404) {
+        console.warn("[useRoom] Room not found (404)");
+        return null;
+      }
+      if (!res.ok) {
+        const errorText = await res.text().catch(() => "Unknown error");
+        console.error("[useRoom] Fetch failed:", { status: res.status, error: errorText });
+        throw new Error("Failed to fetch room");
+      }
+      
+      const data = await res.json();
+      console.log("[useRoom] Room data received:", { 
+        roomCode: data.room?.code, 
+        roomStatus: data.room?.status,
+        hasMe: !!data.me,
+        playerCount: data.players?.length 
+      });
+      
+      return api.rooms.get.responses[200].parse(data);
     },
     // Don't refetch on window focus as WS handles updates
     refetchOnWindowFocus: false,
@@ -136,6 +158,7 @@ export function useJoinRoom() {
 
   return useMutation({
     mutationFn: async (data: JoinRoomInput) => {
+      console.log("[useJoinRoom] Starting join mutation:", data);
       const res = await fetch(api.rooms.join.path, {
         method: api.rooms.join.method,
         headers: { "Content-Type": "application/json" },
@@ -143,20 +166,29 @@ export function useJoinRoom() {
         credentials: "include",
       });
       
+      console.log("[useJoinRoom] Response status:", res.status, res.statusText);
+      
       if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: "Unknown error" }));
+        console.error("[useJoinRoom] Join failed:", { status: res.status, error: errorData });
         if (res.status === 404) throw new Error("Room not found");
-        const error = await res.json();
-        throw new Error(error.message || "Failed to join room");
+        throw new Error(errorData.message || "Failed to join room");
       }
-      return api.rooms.join.responses[200].parse(await res.json());
+      
+      const responseData = await res.json();
+      console.log("[useJoinRoom] Join successful:", responseData);
+      return api.rooms.join.responses[200].parse(responseData);
     },
     onSuccess: (data) => {
+      console.log("[useJoinRoom] onSuccess called:", data);
       setSessionId(data.playerId);
       queryClient.setQueryData(["playerId"], data.playerId);
       // The query will automatically refetch when sessionId changes (it's in the query key)
+      console.log("[useJoinRoom] Navigating to room:", `/room/${data.code}`);
       setLocation(`/room/${data.code}`);
     },
     onError: (err) => {
+      console.error("[useJoinRoom] onError called:", err);
       toast({
         title: "Error",
         description: err.message,

@@ -6,10 +6,42 @@ import confetti from "canvas-confetti";
 interface RevealerCardProps {
   word: string | null;
   isImposter: boolean;
+  language?: "en" | "sq" | "es" | "de";
 }
 
-export function RevealerCard({ word, isImposter }: RevealerCardProps) {
+export function RevealerCard({ word, isImposter, language = "en" }: RevealerCardProps) {
   const [isRevealed, setIsRevealed] = useState(false);
+
+  // Get card gradient based on language flag colors
+  const getCardGradient = () => {
+    switch (language) {
+      case "sq": // Albanian 🇦🇱 - Red and Black
+        return "from-red-600 via-red-900 to-black";
+      case "en": // English 🇬🇧 - Union Jack: Red, White, Blue
+        return "from-red-600 via-blue-600 to-red-800";
+      case "es": // Spanish 🇪🇸 - Red and Yellow
+        return "from-red-600 via-yellow-500 to-red-700";
+      case "de": // German 🇩🇪 - Black, Red, Yellow
+        return "from-black via-red-600 to-yellow-500";
+      default:
+        return "from-red-600 via-blue-600 to-red-800";
+    }
+  };
+
+  const getBorderColor = () => {
+    switch (language) {
+      case "sq": // Albanian - Red border
+        return "border-red-500/20";
+      case "en": // English - Blue border
+        return "border-blue-500/20";
+      case "es": // Spanish - Red border
+        return "border-red-500/20";
+      case "de": // German - Yellow border
+        return "border-yellow-500/20";
+      default:
+        return "border-white/10";
+    }
+  };
 
   // Trigger haptic feedback if available
   const vibrate = () => {
@@ -49,18 +81,18 @@ export function RevealerCard({ word, isImposter }: RevealerCardProps) {
               initial={{ opacity: 0, rotateY: 90 }}
               animate={{ opacity: 1, rotateY: 0 }}
               exit={{ opacity: 0, rotateY: -90 }}
-              className="absolute inset-0 rounded-3xl bg-gradient-to-br from-primary via-purple-600 to-accent shadow-2xl flex flex-col items-center justify-center p-8 text-white text-center border-4 border-white/20"
+              className={`absolute inset-0 rounded-3xl bg-gradient-to-br ${getCardGradient()} shadow-2xl flex flex-col items-center justify-center p-8 text-white text-center border-4 ${getBorderColor()}`}
             >
-              <div className="bg-white/10 rounded-full p-6 mb-6 animate-pulse">
-                <Eye className="w-16 h-16" />
+              <div className="bg-white/20 rounded-full p-6 mb-6 animate-pulse">
+                <Eye className="w-16 h-16 text-white" />
               </div>
-              <h2 className="text-3xl font-bold font-display mb-2">Tap & Hold</h2>
+              <h2 className="text-3xl font-bold font-display mb-2 text-white">Tap & Hold</h2>
               <p className="text-white/80 font-medium">to reveal your secret role</p>
               
               <div className="absolute bottom-8 left-0 right-0 flex justify-center">
-                <div className="flex items-center gap-2 px-4 py-2 bg-black/20 rounded-full backdrop-blur-sm text-sm">
+                <div className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-full backdrop-blur-sm text-sm border border-white/20">
                   <AlertTriangle className="w-4 h-4 text-yellow-300" />
-                  <span>Don't let others see!</span>
+                  <span className="text-white">Don't let others see!</span>
                 </div>
               </div>
             </motion.div>

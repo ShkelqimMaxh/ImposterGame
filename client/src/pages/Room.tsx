@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Copy, Crown, RotateCcw, Play, Share2 } from "lucide-react";
+import { Loader2, Copy, Crown, RotateCcw, Play, Share2, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
@@ -22,20 +22,45 @@ export default function Room() {
   const [retryCount, setRetryCount] = useState(0);
   const [joinName, setJoinName] = useState("");
 
+  // Debug: Log when component mounts
+  useEffect(() => {
+    console.log("[Room] Component mounted/updated:", { code, isLoading, hasGameState: !!gameState, error });
+  }, [code, isLoading, gameState, error]);
+
   useEffect(() => {
     if (error) {
+      console.error("[Room] Error loading room:", error);
       toast({ title: "Error", description: "Room not found or expired", variant: "destructive" });
       setLocation("/");
     }
   }, [error, setLocation, toast]);
 
   // If me is null but we have a session ID, retry the query
+  // If no session ID, immediately show join form (user accessing via link)
   useEffect(() => {
     if (!isLoading && gameState && !gameState.me) {
       const sessionId = localStorage.getItem('playerId');
+      console.log("[Room] User not in room:", { 
+        hasSessionId: !!sessionId, 
+        sessionId, 
+        retryCount, 
+        roomCode: gameState.room.code,
+        roomStatus: gameState.room.status,
+        playerCount: gameState.players.length 
+      });
+      
+      // If no session ID, user is accessing via link - show join form immediately
+      if (!sessionId) {
+        console.log("[Room] No session ID - user accessing via link, showing join form");
+        setRetryCount(2); // Set to 2 to immediately show join form
+        return;
+      }
+      
+      // If we have a session ID but user not found, retry a couple times
       if (sessionId && retryCount < 2) {
         // Wait a bit and retry
         const timer = setTimeout(() => {
+          console.log("[Room] Retrying room fetch, attempt:", retryCount + 1);
           setRetryCount(prev => prev + 1);
           refetch();
         }, 500);
@@ -56,26 +81,70 @@ export default function Room() {
   const isHost = me?.isHost;
   const isPlaying = room.status === "playing";
 
-  const copyRoomLink = () => {
+  const copyRoomLink = async () => {
     const roomUrl = `${window.location.origin}/room/${room.code}`;
-    navigator.clipboard.writeText(roomUrl);
-    toast({ title: "Copied!", description: "Room link copied to clipboard" });
+    try {
+      await navigator.clipboard.writeText(roomUrl);
+      toast({ title: "Copied!", description: "Room link copied to clipboard" });
+    } catch (err) {
+      // Fallback for browsers that don't support clipboard API
+      const textArea = document.createElement('textarea');
+      textArea.value = roomUrl;
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        toast({ title: "Copied!", description: "Room link copied to clipboard" });
+      } catch (fallbackErr) {
+        toast({ title: "Error", description: "Failed to copy link. Please copy manually: " + roomUrl, variant: "destructive" });
+      }
+      document.body.removeChild(textArea);
+    }
   };
 
-  const copyCode = () => {
-    navigator.clipboard.writeText(room.code);
-    toast({ title: "Copied!", description: "Room code copied to clipboard" });
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(room.code);
+      toast({ title: "Copied!", description: "Room code copied to clipboard" });
+    } catch (err) {
+      // Fallback for browsers that don't support clipboard API
+      const textArea = document.createElement('textarea');
+      textArea.value = room.code;
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        toast({ title: "Copied!", description: "Room code copied to clipboard" });
+      } catch (fallbackErr) {
+        toast({ title: "Error", description: "Failed to copy code", variant: "destructive" });
+      }
+      document.body.removeChild(textArea);
+    }
   };
 
   const handleJoinFromLink = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("[Room] handleJoinFromLink called:", { code, joinName: joinName.trim() });
     if (code && joinName.trim()) {
+      console.log("[Room] Attempting to join room:", { code, name: joinName.trim() });
       joinRoom.mutate({ code, name: joinName.trim() });
+    } else {
+      console.warn("[Room] Cannot join - missing code or name:", { code, joinName });
     }
   };
 
-  // If user is not in room and we've tried retries, show join form
+  // If user is not in room and we've tried retries (or no session ID), show join form
   if (!me && retryCount >= 2 && gameState && gameState.room.status === "waiting") {
+    console.log("[Room] Showing join form - user not in room:", { 
+      retryCount, 
+      roomStatus: gameState.room.status,
+      roomCode: gameState.room.code,
+      hasSessionId: !!localStorage.getItem('playerId')
+    });
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
         <motion.div
@@ -97,6 +166,12 @@ export default function Room() {
                 placeholder="e.g. Sneaky Pete"
                 value={joinName}
                 onChange={(e) => setJoinName(e.target.value)}
+                onFocus={(e) => {
+                  // Scroll input into view on mobile when keyboard opens
+                  setTimeout(() => {
+                    e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }, 100);
+                }}
                 className="text-lg py-6 border-2"
                 maxLength={12}
                 required
@@ -115,6 +190,12 @@ export default function Room() {
                 "Join Game"
               )}
             </Button>
+            
+            {joinRoom.isError && (
+              <p className="text-sm text-destructive text-center">
+                {joinRoom.error?.message || "Failed to join room"}
+              </p>
+            )}
           </form>
 
           <Button
@@ -193,25 +274,57 @@ export default function Room() {
             >
               <RevealerCard 
                 word={room.word} 
-                isImposter={room.imposterId === me.sessionId} 
+                isImposter={room.imposterId === me.sessionId}
+                language={room.language as "en" | "sq" | "es" | "de"}
               />
+
+              {/* Game Rules */}
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="mt-8 text-center"
+              >
+                <p className="text-sm text-muted-foreground font-medium">
+                  Start with hinting 1 by 1
+                </p>
+              </motion.div>
 
               {isHost && (
                 <motion.div 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 1 }}
-                  className="mt-12 space-y-4"
+                  className="mt-8 space-y-3"
                 >
-                  <Button 
-                    variant="outline"
-                    onClick={() => resetGame.mutate()}
-                    disabled={resetGame.isPending}
-                    className="w-full h-14 rounded-xl border-2 border-dashed border-muted-foreground/30 hover:bg-muted"
-                  >
-                    <RotateCcw className="mr-2 w-5 h-5" />
-                    New Round
-                  </Button>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button 
+                      variant="outline"
+                      onClick={() => resetGame.mutate()}
+                      disabled={resetGame.isPending}
+                      className="h-14 rounded-xl border-2 border-muted-foreground/30 hover:bg-muted"
+                    >
+                      <RotateCcw className="mr-2 w-5 h-5" />
+                      Retry
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          await resetGame.mutateAsync();
+                          setLocation("/");
+                        } catch (err) {
+                          // If reset fails, just navigate home anyway
+                          setLocation("/");
+                        }
+                      }}
+                      disabled={resetGame.isPending}
+                      className="h-14 rounded-xl border-2 border-destructive/30 hover:bg-destructive/10 text-destructive hover:text-destructive"
+                    >
+                      <X className="mr-2 w-5 h-5" />
+                      Close Game
+                    </Button>
+                  </div>
                 </motion.div>
               )}
             </motion.div>
